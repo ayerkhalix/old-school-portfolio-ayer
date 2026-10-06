@@ -9,6 +9,13 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
   const light = useRef<{ intensity: number } | null>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    // Small screens use the intentional CSS cabinet and skip the Three.js payload.
+    if (window.matchMedia("(max-width: 540px)").matches) return;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("webgl2", { alpha: true, antialias: true, powerPreference: "low-power" });
+    // Probe first so unavailable graphics quietly use the fallback instead of
+    // causing the renderer to emit an avoidable console error.
+    if (!context) return;
     let cancelled = false;
     let renderer: WebGLRenderer | undefined;
     let dispose: (() => void) | undefined;
@@ -16,7 +23,7 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
       const { RoundedBoxGeometry } = await import("three/addons/geometries/RoundedBoxGeometry.js");
       if (cancelled || !host.current) return;
       try {
-        renderer = new T.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" });
+        renderer = new T.WebGLRenderer({ canvas, context, alpha: true, antialias: true, powerPreference: "low-power" });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); renderer.setClearColor(0x000000, 0);
         renderer.outputColorSpace = T.SRGBColorSpace;
         const scene = new T.Scene();

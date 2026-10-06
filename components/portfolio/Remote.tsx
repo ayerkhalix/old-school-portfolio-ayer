@@ -34,7 +34,7 @@ export default function Remote(p: RemoteProps) {
       </div>
       <div className="remote-bottom">
         <button className="remote-button" onClick={p.back} aria-label="Go back"><Undo2 size={15} /><span>BACK</span></button>
-        <button className="remote-button" onClick={p.mute} aria-label={p.muted ? "Enable sound" : "Mute sound"} aria-pressed={p.muted}>{p.muted ? <VolumeX size={15} /> : <Volume2 size={15} />}<span>{p.muted ? "SOUND" : "MUTE"}</span></button>
+        <button className="remote-button" onClick={p.mute} aria-label={p.muted ? "Enable sound" : "Mute sound"} aria-pressed={p.muted} title="Room ambience and remote sounds · M key">{p.muted ? <VolumeX size={15} /> : <Volume2 size={15} />}<span>{p.muted ? "SOUND" : "MUTE"}</span></button>
       </div>
       <div className="remote-model">AK–07 <span>•</span> PORTFOLIO EDITION</div>
     </div>

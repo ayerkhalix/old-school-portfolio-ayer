@@ -38,7 +38,7 @@ Food N Bev N Beyond has a typographic cover because no actual project screenshot
 - OK / Enter / Space: open the selected project. BACK / Escape: close the detail view.
 - H, A, P, E, S, W, C: Home, About, Projects, Experience, Skills, Awards, Contact.
 - F: toggle browser fullscreen or CSS immersive fallback. Escape also exits immersive mode.
-- M: toggle sound. Sound starts muted, only plays after interaction, and remembers its preference.
+- M / SOUND: enable quiet room air, a CRT hum, mechanical remote clicks, channel static, and power sweeps. Sound starts muted and remembers its preference; reloading never starts audio until you interact.
 - VOL +/−: adjust the locally saved sound level.
 - ?: keyboard reference. Tab retains normal focus navigation.
 - Mobile: fixed touch controller with channel selector, project arrows, OK, back, power, fullscreen, and sound. Screen content scrolls normally by touch.
@@ -50,7 +50,8 @@ Food N Bev N Beyond has a typographic cover because no actual project screenshot
 - `Channels.tsx`: semantic HTML content and project browser.
 - `Remote.tsx`: accessible physical buttons, CSS depth and perspective.
 - `TelevisionModel.tsx`: lazy procedural Three.js mesh with an orthographic camera, textured cabinet, vents, knobs, and lighting. There is no continuous rendering loop: it renders on initialization, resize, and power changes.
-- `useAudio.ts`: subtle Web Audio tones and local preferences. No audio assets or autoplay.
+- `AmbientRoom.tsx`: localized leaf sway and lamp flicker animate the original room artwork, with slow smoke across the desk. The lightweight shader runs at 24 fps (18 on phones), pauses in hidden tabs, and uses the original still image for reduced motion or unavailable WebGL.
+- `useAudio.ts`: synthesized room ambience and retro effects share one volume/mute control. The CRT hum follows television power. Audio starts only after a gesture, pauses in hidden tabs, and releases its graph on unmount. No audio assets or autoplay.
 - No Spline scene was supplied. Three.js provides a self-contained 3D television; a lightweight render of that exact cabinet preserves its color and geometry during loading and when WebGL fails. The remote uses HTML and CSS 3D transforms. Mobile uses its own CSS cabinet and simplifies the scene instead of shrinking the desktop remote.
 - Responsive WebP assets, local fonts, pixel ratio capped at 1.5, and reduced-motion support.
 - All seven channels are present in the server-rendered DOM, with structured project metadata, Open Graph / X metadata, semantic headings, native controls, focus indicators, and a skip link.
@@ -64,7 +65,7 @@ npm test
 
 The checked environment has locally installed Chrome and Edge. `playwright.config.ts` covers Desktop Chrome, Desktop Edge, Tablet Chrome, Mobile Chrome, and iPhone-sized WebKit. WebKit emulation is not a test on a physical iPhone.
 
-Forty browser checks passed: all channels and contact links, project browsing/detail/back, scroll recovery, power/navigation recovery, sound persistence, deep links and history, keyboard input and help, denied Fullscreen API fallback, preserved fullscreen navigation, reduced motion, focus, horizontal overflow, WebGL failure, failed wallpaper loading, and rapid channel input. Native Fullscreen API was also checked in Chrome. Production export and TypeScript checks pass.
+Browser checks cover all channels and contact links, project browsing/detail/back, scroll recovery, power/navigation recovery, sound persistence, deep links and history, keyboard input and help, denied Fullscreen API fallback, preserved fullscreen navigation, reduced motion, focus, horizontal overflow, WebGL failure, failed wallpaper loading, and rapid channel input. Ambient checks exercise audio gesture gating, volume/mute, power-dependent hum, hidden-tab suspension, reduced-motion changes, and a still-image fallback after context loss. The Windows WebKit test build does not expose Web Audio, so its audio fallback is checked; physical iOS audio still needs a device check. Native Fullscreen API was also checked in Chrome. Set `PLAYWRIGHT_BASE_URL` to test a separately served production export.
 
 ## Artwork provenance
 

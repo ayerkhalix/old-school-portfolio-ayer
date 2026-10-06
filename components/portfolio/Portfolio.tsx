@@ -6,6 +6,7 @@ import { channels, projects, profile, type Channel } from "@/data/portfolio";
 import Channels from "./Channels";
 import Remote from "./Remote";
 import { useAudio } from "./useAudio";
+import AmbientRoom from "./AmbientRoom";
 const TelevisionModel = dynamic(() => import("./TelevisionModel"), { ssr: false });
 
 function hashChannel(): Channel {
@@ -29,7 +30,7 @@ export default function Portfolio() {
   const stabilizingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const volumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = useRef<Channel>("home");
-  const { muted, volume, sound, toggleMute, changeVolume } = useAudio();
+  const { muted, volume, sound, toggleMute, changeVolume } = useAudio(powered);
 
   const navigate = useCallback((next: Channel, history = true) => {
     setUsed(true); setPowered(true);
@@ -72,8 +73,8 @@ export default function Portfolio() {
     else navigate("home");
   }, [detail, navigate, sound]);
   const power = useCallback(() => {
-    setUsed(true); sound("power"); setPowered(p => !p);
-  }, [sound]);
+    setUsed(true); sound(powered ? "power-off" : "power-on"); setPowered(p => !p);
+  }, [powered, sound]);
   const toggleFullscreen = useCallback(async () => {
     setUsed(true); sound();
     if (fullscreen) {
@@ -146,7 +147,7 @@ export default function Portfolio() {
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Person", name: profile.name, jobTitle: profile.role, email: profile.email, sameAs: [profile.github, profile.linkedin], address: { "@type": "PostalAddress", addressLocality: "Puerto Princesa City", addressRegion: "Palawan", addressCountry: "PH" }, subjectOf: projects.map(project => ({ "@type": "CreativeWork", name: project.name, description: project.description, ...(project.live ? { url: project.live } : {}) })) }).replace(/</g, "\\u003c") }} />
     <a className="skip-link" href="#portfolio-screen">Skip to portfolio screen</a>
     <div ref={scene} className={`portfolio-room ${fullscreen ? "immersive" : ""} ${powered ? "powered" : "unpowered"}`}>
-      <div className="room-backdrop" aria-hidden="true" /><div className="room-atmosphere" aria-hidden="true" />
+      <div className="room-backdrop" aria-hidden="true"><AmbientRoom /></div><div className="room-atmosphere" aria-hidden="true" />
       <header className="room-header"><a href="#home" className="wordmark" onClick={e => { e.preventDefault(); navigate("home"); }} aria-label="Ayer Khali Abrio home">aka<span>AN INDEPENDENT DEVELOPER'S FREQUENCY</span></a><div className="room-status"><span className="signal-dot" />{powered ? "ON AIR" : "STANDBY"}<span className="status-divider" />PALAWAN, PH</div></header>
       <div className="main-composition">
         <div className="television-area">

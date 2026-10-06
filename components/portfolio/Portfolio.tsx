@@ -152,7 +152,7 @@ export default function Portfolio() {
         <div className="television-area">
           <div className="television-shadow" aria-hidden="true" />
           <div className="television">
-            <div className="tv-fallback" aria-hidden="true"><div className="fallback-bezel" /><div className="fallback-vents" /><div className="fallback-speaker" /><div className="fallback-knob" /></div>
+            <img className="tv-fallback" src="/images/tv-cabinet.webp" alt="" aria-hidden="true" width={1434} height={1042} loading="eager" fetchPriority="high" />
             <TelevisionModel powered={powered} />
             <div className="tv-brand" aria-hidden="true">A.K.A.<span>COLOR TELEVISION</span></div>
             <div className={`tv-led ${powered ? "lit" : ""}`} aria-hidden="true" />

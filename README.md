@@ -51,7 +51,7 @@ Food N Bev N Beyond has a typographic cover because no actual project screenshot
 - `Remote.tsx`: accessible physical buttons, CSS depth and perspective.
 - `TelevisionModel.tsx`: lazy procedural Three.js mesh with an orthographic camera, textured cabinet, vents, knobs, and lighting. There is no continuous rendering loop: it renders on initialization, resize, and power changes.
 - `useAudio.ts`: subtle Web Audio tones and local preferences. No audio assets or autoplay.
-- No Spline scene was supplied. Three.js provides a self-contained 3D television; a CSS cabinet preserves navigation when WebGL fails. The remote uses HTML and CSS 3D transforms. Mobile simplifies the scene instead of shrinking the desktop remote.
+- No Spline scene was supplied. Three.js provides a self-contained 3D television; a lightweight render of that exact cabinet preserves its color and geometry during loading and when WebGL fails. The remote uses HTML and CSS 3D transforms. Mobile uses its own CSS cabinet and simplifies the scene instead of shrinking the desktop remote.
 - Responsive WebP assets, local fonts, pixel ratio capped at 1.5, and reduced-motion support.
 - All seven channels are present in the server-rendered DOM, with structured project metadata, Open Graph / X metadata, semantic headings, native controls, focus indicators, and a skip link.
 

@@ -7,6 +7,7 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const render = useRef<(() => void) | null>(null);
   const light = useRef<{ intensity: number } | null>(null);
+  const currentPower = useRef(powered);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     // Small screens use the intentional CSS cabinet and skip the Three.js payload.
@@ -56,7 +57,7 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
         mesh(new RoundedBoxGeometry(1.2, 0.43, 0.12, 2, 0.05), trim, 3.16, -3.04, 0.47);
         mesh(new RoundedBoxGeometry(0.82, 0.19, 0.11, 2, 0.04), dark, 3.16, -3.04, 0.57);
         for (const x of [-3.88, 3.8]) mesh(new RoundedBoxGeometry(0.68, 0.39, 0.65, 2, 0.08), rubber, x, -3.58, -0.25);
-        const cyan = new T.PointLight(0x69d7f8, 8, 15); cyan.position.set(-4, 1.1, 4); scene.add(cyan); light.current = cyan;
+        const cyan = new T.PointLight(0x69d7f8, currentPower.current ? 8 : 1.8, 15); cyan.position.set(-4, 1.1, 4); scene.add(cyan); light.current = cyan;
         const amber = new T.DirectionalLight(0xffd7ab, 2.4); amber.position.set(1, 7, 7); scene.add(amber);
         const blue = new T.DirectionalLight(0x618ac9, 1.2); blue.position.set(-8, 1, 4); scene.add(blue);
         const purple = new T.DirectionalLight(0x8578ce, 0.7); purple.position.set(7, 0, 3); scene.add(purple);
@@ -84,6 +85,7 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
     return () => { cancelled = true; dispose?.(); };
   }, []);
   useEffect(() => {
+    currentPower.current = powered;
     if (light.current) light.current.intensity = powered ? 8 : 1.8;
     render.current?.();
   }, [powered, ready]);

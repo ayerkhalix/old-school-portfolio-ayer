@@ -31,11 +31,8 @@ button:disabled { cursor: default; }
 .television-model { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; }
 .television-model.model-ready { opacity: 1; }
 .television-model canvas { display: block; width: 100%; height: 100%; }
-.tv-fallback { position: absolute; top: 4.45%; left: 2.6%; width: 94.3%; height: 89%; border-radius: 4.5% / 5.5%; border: 2px solid #807b73; background: linear-gradient(122deg, #656765, #7c756b 33%, #635e57 75%, #4d4e4c); box-shadow: inset 3px 3px 3px #e3d1b333, inset -5px -5px 4px #17171777, -12px 6px 0 #293637, -16px 8px 0 #151e23, 0 18px 25px #0008; }
-.fallback-bezel { position: absolute; top: 5%; left: 4%; width: 83%; height: 84%; background: #070e12; border-radius: 7%; box-shadow: 0 0 0 6px #4b4d4a, inset 0 0 16px #000; }
-.fallback-speaker { position: absolute; right: 2.7%; top: 8%; width: 7.4%; height: 38%; background: repeating-linear-gradient(#202524 0px, #202524 5px, #55524b 6px, #55524b 9px); border: 1px solid #282b27; }
-.fallback-vents { position: absolute; bottom: 3%; left: 12%; width: 50%; height: 5%; background: repeating-linear-gradient(#202424 0px, #202424 3px, #5c574e 4px, #5c574e 6px); }
-.fallback-knob { position: absolute; right: 3%; bottom: 23%; width: 6%; aspect-ratio: 1; border-radius: 50%; background: linear-gradient(120deg,#43413c,#101415); border: 3px solid #242825; box-shadow: 2px 2px 3px #0007; }
+.tv-fallback { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.television:has(.model-ready) .tv-fallback { visibility: hidden; }
 .tv-brand { position: absolute; z-index: 3; top: 47.7%; left: 87.8%; width: 7.5%; text-align: center; color: #b9aca0; font: 12px var(--mono); letter-spacing: 3px; text-shadow: 0 1px #181b1b; }
 .tv-brand span { display: block; font-size: 5px; letter-spacing: 0.8px; margin-top: 9px; opacity: 0.6; }
 .tv-led { position: absolute; top: 63.1%; left: 94.1%; width: 5px; height: 5px; background: #173c2a; border-radius: 50%; z-index: 3; }

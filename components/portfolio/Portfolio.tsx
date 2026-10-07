@@ -7,13 +7,16 @@ import Channels from "./Channels";
 import Remote from "./Remote";
 import { useAudio } from "./useAudio";
 import AmbientRoom from "./AmbientRoom";
+import { useMusic } from "./useMusic";
+import MusicChannel from "./MusicChannel";
+import type { MusicTrack } from "@/data/music";
 const TelevisionModel = dynamic(() => import("./TelevisionModel"), { ssr: false });
 
 function hashChannel(): Channel {
   const id = window.location.hash.slice(1).split("/")[0];
   return channels.find(c => c.id === id)?.id ?? "home";
 }
-export default function Portfolio() {
+export default function Portfolio({ tracks }: { tracks: MusicTrack[] }) {
   const [channel, setChannel] = useState<Channel>("home");
   const [powered, setPowered] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
@@ -24,13 +27,16 @@ export default function Portfolio() {
   const [booting, setBooting] = useState(true);
   const [help, setHelp] = useState(false);
   const [volumeVisible, setVolumeVisible] = useState(false);
+  const [volumePulse, setVolumePulse] = useState(0);
   const scene = useRef<HTMLDivElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stabilizingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const volumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = useRef<Channel>("home");
-  const { muted, volume, sound, toggleMute, changeVolume } = useAudio(powered);
+  const { muted, volume, sound, toggleMute, changeVolume, unmute } = useAudio();
+  const music = useMusic(tracks, volume, muted, unmute);
+  const { moveCursor, seek, step: stepTrack, playTrack, cursor } = music;
 
   const navigate = useCallback((next: Channel, history = true) => {
     setUsed(true); setPowered(true);
@@ -47,9 +53,10 @@ export default function Portfolio() {
     }, reduced ? 0 : 220);
   }, [sound]);
   const stepChannel = useCallback((amount: number) => {
+    if (current.current === "music") { stepTrack(amount); return; }
     const index = channels.findIndex(c => c.id === current.current);
     navigate(channels[(index + amount + channels.length) % channels.length].id);
-  }, [navigate]);
+  }, [navigate, stepTrack]);
 
   const selectProject = useCallback((index: number, open = false) => {
     setSelected(index); setDetail(open); setUsed(true); sound();
@@ -57,17 +64,23 @@ export default function Portfolio() {
   }, [sound]);
   const direction = useCallback((dir: "left" | "right" | "up" | "down") => {
     setUsed(true); setPowered(true);
+    if (current.current === "music") {
+      if (dir === "up" || dir === "down") moveCursor(dir === "up" ? -1 : 1);
+      else seek(dir === "right" ? 10 : -10);
+      sound(); return;
+    }
     if (dir === "up" || dir === "down") {
       scroll.current?.scrollBy({ top: dir === "up" ? -150 : 150, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); sound();
     } else if (current.current === "projects") selectProject((selected + (dir === "right" ? 1 : -1) + projects.length) % projects.length, detail);
     else stepChannel(dir === "right" ? 1 : -1);
-  }, [detail, selected, selectProject, sound, stepChannel]);
+  }, [detail, selected, selectProject, sound, stepChannel, moveCursor, seek]);
   const select = useCallback(() => {
     setPowered(true); setUsed(true);
+    if (current.current === "music") { playTrack(cursor); sound(); return; }
     if (current.current === "projects") { setDetail(true); sound(); scroll.current?.scrollTo({ top: 0 }); }
     else if (current.current === "home") navigate("projects");
     else scroll.current?.querySelector<HTMLElement>("a, button")?.focus();
-  }, [navigate, sound]);
+  }, [navigate, sound, playTrack, cursor]);
   const back = useCallback(() => {
     if (detail) { setDetail(false); scroll.current?.scrollTo({ top: 0 }); sound(); }
     else navigate("home");
@@ -88,12 +101,19 @@ export default function Portfolio() {
     }
   }, [fullscreen, sound]);
   const adjustVolume = useCallback((amount: number) => {
-    changeVolume(amount); sound(); setUsed(true); setVolumeVisible(true);
+    changeVolume(amount); sound(); setUsed(true); setVolumeVisible(true); setVolumePulse(p => p + 1);
     if (volumeTimer.current) clearTimeout(volumeTimer.current);
-    volumeTimer.current = setTimeout(() => setVolumeVisible(false), 1500);
+    volumeTimer.current = setTimeout(() => setVolumeVisible(false), 1100);
   }, [changeVolume, sound]);
+  const mute = useCallback(() => {
+    toggleMute(); setUsed(true); setVolumeVisible(true); setVolumePulse(p => p + 1);
+    if (volumeTimer.current) clearTimeout(volumeTimer.current);
+    volumeTimer.current = setTimeout(() => setVolumeVisible(false), 1100);
+  }, [toggleMute]);
 
   useEffect(() => {
+    // The URL fragment is only available after the server HTML is hydrated.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     const initial = hashChannel(); setChannel(initial); current.current = initial;
     let cancelled = false;
     const image = new window.Image(); image.src = "/images/coast.webp";
@@ -126,16 +146,18 @@ export default function Portfolio() {
       if (event.key === "?") { setHelp(p => !p); return; }
       // Keep native link/button activation and arrow-key focus behavior intact.
       if (target.closest("button, a, [role=dialog]") && (event.key === "Enter" || event.key === " " || event.key.startsWith("Arrow"))) return;
-      const shortcuts: Record<string, Channel> = { h: "home", a: "about", p: "projects", e: "experience", s: "skills", w: "awards", c: "contact" };
+      const shortcuts: Record<string, Channel> = { h: "home", a: "about", p: "projects", e: "experience", s: "skills", w: "awards", c: "contact", n: "music" };
       const key = event.key.toLowerCase();
       if (shortcuts[key]) { event.preventDefault(); navigate(shortcuts[key]); }
       else if (key === "f") { event.preventDefault(); void toggleFullscreen(); }
-      else if (key === "m") toggleMute();
+      else if (key === "m") mute();
+      else if (key === "+" || key === "=") adjustVolume(5);
+      else if (key === "-") adjustVolume(-5);
       else if (event.key.startsWith("Arrow")) { event.preventDefault(); direction(event.key.replace("Arrow", "").toLowerCase() as "left" | "right" | "up" | "down"); }
       else if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); }
     };
     window.addEventListener("keydown", keydown); return () => window.removeEventListener("keydown", keydown);
-  }, [back, detail, direction, fullscreen, help, navigate, select, toggleFullscreen, toggleMute]);
+  }, [back, detail, direction, fullscreen, help, navigate, select, toggleFullscreen, mute, adjustVolume]);
   useEffect(() => {
     const previous = document.body.style.overflow;
     if (fullscreen) document.body.style.overflow = "hidden";
@@ -147,8 +169,8 @@ export default function Portfolio() {
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Person", name: profile.name, jobTitle: profile.role, email: profile.email, sameAs: [profile.github, profile.linkedin], address: { "@type": "PostalAddress", addressLocality: "Puerto Princesa City", addressRegion: "Palawan", addressCountry: "PH" }, subjectOf: projects.map(project => ({ "@type": "CreativeWork", name: project.name, description: project.description, ...(project.live ? { url: project.live } : {}) })) }).replace(/</g, "\\u003c") }} />
     <a className="skip-link" href="#portfolio-screen">Skip to portfolio screen</a>
     <div ref={scene} className={`portfolio-room ${fullscreen ? "immersive" : ""} ${powered ? "powered" : "unpowered"}`}>
-      <div className="room-backdrop" aria-hidden="true"><AmbientRoom /></div><div className="room-atmosphere" aria-hidden="true" />
-      <header className="room-header"><a href="#home" className="wordmark" onClick={e => { e.preventDefault(); navigate("home"); }} aria-label="Ayer Khali Abrio home">aka<span>AN INDEPENDENT DEVELOPER'S FREQUENCY</span></a><div className="room-status"><span className="signal-dot" />{powered ? "ON AIR" : "STANDBY"}<span className="status-divider" />PALAWAN, PH</div></header>
+      <div className="room-backdrop" aria-hidden="true"><AmbientRoom /></div><div className="room-atmosphere" aria-hidden="true" /><div className="crt-room-light" aria-hidden="true" /><div className="atmospheric-haze" aria-hidden="true" />
+      <header className="room-header"><a href="#home" className="wordmark" onClick={e => { e.preventDefault(); navigate("home"); }} aria-label="Ayer Khali Abrio home">aka<span>AN INDEPENDENT DEVELOPER&apos;S FREQUENCY</span></a><div className="room-status"><span className="signal-dot" />{powered ? "ON AIR" : "STANDBY"}<span className="status-divider" />PALAWAN, PH</div></header>
       <div className="main-composition">
         <div className="television-area">
           <div className="television-shadow" aria-hidden="true" />
@@ -162,19 +184,21 @@ export default function Portfolio() {
               <div className="screen-interface" inert={!powered}>
                 <div className="screen-header"><span>CH {String(index + 1).padStart(2, "0")}</span><span>{channels[index].label.toUpperCase()} <span className="small-play">▸</span></span></div>
                 <div className="screen-scroll" ref={scroll} role="region" aria-label={`${channels[index].label} channel content`} tabIndex={0}>
-                  {channels.map(c => <div key={c.id} hidden={channel !== c.id} className="channel-view"><Channels channel={c.id} selected={selected} detail={detail} navigate={navigate} selectProject={selectProject} close={() => { setDetail(false); scroll.current?.scrollTo({ top: 0 }); }} /></div>)}
+                  {channels.map(c => <div key={c.id} hidden={channel !== c.id} className="channel-view">{c.id === "music" ? <MusicChannel music={music} volume={volume} muted={muted} adjustVolume={adjustVolume} active={channel === "music" && powered} /> : <Channels channel={c.id} selected={selected} detail={detail} navigate={navigate} selectProject={selectProject} close={() => { setDetail(false); scroll.current?.scrollTo({ top: 0 }); }} />}</div>)}
                 </div>
                 <div className="screen-footer"><span><i className="signal-dot" />{channel === "home" ? "PRESS A BUTTON TO EXPLORE" : detail ? "BACK TO BROWSE · ↑ ↓ TO SCROLL" : "USE THE REMOTE TO EXPLORE"}</span><span className="signal-bars" aria-label="Signal acquired"><i /><i /><i /><i /><i /></span></div>
               </div>
-              <div className="crt-scanlines" aria-hidden="true" /><div className="crt-glass" aria-hidden="true" /><div className="crt-static" aria-hidden="true" />
+              <div className="crt-scanlines" aria-hidden="true" /><div className="crt-glass" aria-hidden="true" /><div className="crt-static" aria-hidden="true" /><div key={String(powered)} className={`crt-power-flash ${powered ? "power-up" : "power-down"}`} aria-hidden="true" />
+              {powered && <span className="audio-status">AUDIO / {muted ? "MUTE" : music.playing ? "● PLAY" : "IDLE"}</span>}
               {!powered && <div className="power-off-message"><span>NO SIGNAL</span><button onClick={power}>PRESS POWER TO TUNE BACK IN</button></div>}
               {booting && powered && <div className="boot-screen" role="status"><span className="eyebrow">AKA / SYSTEM BOOT</span><strong>INITIALIZING DISPLAY...</strong><div className="boot-progress"><span /></div><small>ACQUIRING SIGNAL</small></div>}
-              {volumeVisible && powered && <div className="volume-osd" role="status">{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}<span>VOLUME {volume}</span><div><i style={{ width: `${volume}%` }} /></div>{muted && <small>SOUND MUTED</small>}</div>}
+              {volumeVisible && powered && <div key={volumePulse} className="volume-osd" role="status">{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}<span>VOLUME {volume}</span><div><i style={{ width: `${volume}%` }} /></div>{muted && <small>SOUND MUTED</small>}</div>}
             </div>
           </div>
           <div className="television-caption"><span>AKA–01</span><span>GOOD IDEAS. CLEAR SIGNAL.</span><span>EST. IN PALAWAN</span></div>
+          {music.needsGesture && !muted && <button className="radio-start" aria-label="Start radio" onClick={() => music.playTrack(music.trackIndex)}><Volume2 size={16} /><span>START RADIO <small>{music.tracks[music.trackIndex]?.title}</small></span></button>}
         </div>
-        <Remote channel={channel} powered={powered} fullscreen={fullscreen} muted={muted} used={used} navigate={navigate} power={power} toggleFullscreen={() => void toggleFullscreen()} mute={toggleMute} volume={adjustVolume} stepChannel={stepChannel} direction={direction} select={select} back={back} />
+        <Remote channel={channel} powered={powered} fullscreen={fullscreen} muted={muted} used={used} navigate={navigate} power={power} toggleFullscreen={() => void toggleFullscreen()} mute={mute} volume={adjustVolume} stepChannel={stepChannel} direction={direction} select={select} back={back} />
       </div>
       <div className="mobile-controller" aria-label="Compact touch remote">
         <button className="touch-power" aria-label={powered ? "Power off" : "Power on"} onClick={power}><Power size={19} /></button>
@@ -183,7 +207,7 @@ export default function Portfolio() {
         <button className="touch-ok" aria-label="Touch select project" onClick={select}>OK</button>
         <button className="touch-next" aria-label="Touch next project or channel" onClick={() => direction("right")}><ChevronRight size={20} /></button>
         <button className="touch-full" aria-label={fullscreen ? "Touch exit fullscreen" : "Touch fullscreen"} onClick={() => void toggleFullscreen()}><Maximize size={17} /></button>
-        <button className="touch-mute" aria-label={muted ? "Touch enable sound" : "Touch mute sound"} onClick={toggleMute}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}</button>
+        <button className="touch-mute" aria-label={muted ? "Touch enable sound" : "Touch mute sound"} data-audio-mute onClick={mute}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}</button>
         <button className="touch-back" aria-label="Touch back" onClick={back}><Undo2 size={17} /></button>
       </div>
       <footer className="room-footer"><span>© {new Date().getFullYear()} {profile.name}<span className="footer-note"> · BUILT WITH INTENTION</span></span><div><button onClick={() => setHelp(true)}><Keyboard size={15} /> KEYBOARD CONTROLS</button><button onClick={() => void toggleFullscreen()}><Maximize size={14} /> {fullscreen ? "EXIT IMMERSIVE" : "GO IMMERSIVE"}</button></div></footer>

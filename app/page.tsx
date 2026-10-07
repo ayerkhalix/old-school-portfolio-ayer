@@ -1,2 +1,3 @@
 import Portfolio from "@/components/portfolio/Portfolio";
-export default function Page() { return <Portfolio />; }
+import { discoverMusic } from "@/lib/music";
+export default async function Page() { return <Portfolio tracks={await discoverMusic()} />; }

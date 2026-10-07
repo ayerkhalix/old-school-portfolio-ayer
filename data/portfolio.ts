@@ -3,6 +3,7 @@ export const channels = [
   { id: "projects", label: "Projects", key: "P" }, { id: "experience", label: "Experience", key: "E" },
   { id: "skills", label: "Skills", key: "S" }, { id: "awards", label: "Awards", key: "W" },
   { id: "contact", label: "Contact", key: "C" },
+  { id: "music", label: "Music", key: "N" },
 ] as const;
 export type Channel = typeof channels[number]["id"];
 // Sources: ayerkhali.vercel.app and the owner's supplied project brief.
@@ -12,6 +13,7 @@ export const profile = {
   location: "Puerto Princesa City, Palawan", country: "Philippines",
   email: "ayerkhalidesu@gmail.com", github: "https://github.com/ayerkhalix",
   linkedin: "https://www.linkedin.com/in/ayer-khali-abrio-a71364362/",
+  instagram: "https://www.instagram.com/ayerkundesu/",
   resume: null as string | null, // The original /resume.pdf returns 404. Add a valid local PDF here.
   about: "I'm Ayer, but you can call me Yeng. I'm a BSIT graduate from Palawan who builds web applications and software that people can actually use. My work spans internal company tools, client websites, and a thesis that brought machine learning onto a mobile device.",
   approach: "I like understanding the problem before writing the code. Then I work through the interface, the data, and the details that make a system reliable. I'm looking for opportunities to keep building and learning with a good team.",

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
-const sections = ["Home", "About", "Projects", "Experience", "Skills", "Awards", "Contact"];
-const headings = ["Ayer Khali Abrio.", "Hi, I'm Yeng.", "Things I've built.", "Learning by building.", "Tools of the trade.", "Good work, recognized.", "Have something in mind?"];
+const sections = ["Home", "About", "Projects", "Experience", "Skills", "Awards", "Contact", "Music"];
+const headings = ["Ayer Khali Abrio.", "Hi, I'm Yeng.", "Things I've built.", "Learning by building.", "Tools of the trade.", "Good work, recognized.", "Have something in mind?", "Night Radio."];
 const mobile = (page: Page) => (page.viewportSize()?.width ?? 1440) <= 540;
 async function tune(page: Page, section: string) {
   if (mobile(page)) await page.getByLabel("Choose channel").selectOption(section.toLowerCase());
@@ -12,13 +12,14 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".boot-screen")).toHaveCount(0);
 });
-test("all seven channels, verified links, and no page errors", async ({ page }) => {
+test("all eight channels, verified links, and no page errors", async ({ page }) => {
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   for (let i = 0; i < sections.length; i++) {
     await tune(page, sections[i]);
     await expect(page.getByRole("heading", { name: headings[i], exact: true })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`#${sections[i].toLowerCase()}$`));
   }
+  await tune(page, "Contact");
   await expect(page.getByRole("link", { name: /ayerkhalidesu@gmail.com/ })).toHaveAttribute("href", "mailto:ayerkhalidesu@gmail.com");
   await expect(page.getByRole("link", { name: "GitHub", exact: true })).toHaveAttribute("href", "https://github.com/ayerkhalix");
   await expect(page.getByRole("link", { name: "LinkedIn", exact: true })).toHaveAttribute("href", /linkedin.com\/in\/ayer-khali/);
@@ -36,13 +37,13 @@ test("remote browses projects, opens details, scrolls and returns", async ({ pag
   await expect(page.getByRole("heading", { name: "Things I've built.", exact: true })).toBeVisible();
   await expect(page.locator(".screen-scroll")).toHaveJSProperty("scrollTop", 0);
 });
-test("power state recovers through navigation and sound preference survives reload", async ({ page }) => {
+test("power recovers through navigation and sound defaults on after reload", async ({ page }) => {
   await page.getByRole("button", { name: mobile(page) ? "Power off" : "Turn television off", exact: true }).click();
   await expect(page.locator(".tv-screen")).toHaveClass(/screen-off/);
   await expect(page.locator(".power-off-message")).toBeVisible();
   await tune(page, "About"); await expect(page.locator(".tv-screen")).toHaveClass(/screen-on/);
-  await page.getByRole("button", { name: mobile(page) ? "Touch enable sound" : "Enable sound", exact: true }).click();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("crt-muted"))).toBe("false");
+  await page.getByRole("button", { name: mobile(page) ? "Touch mute sound" : "Mute sound", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("portfolio.muted"))).toBe("true");
   await page.reload(); await expect(page.locator(".boot-screen")).toHaveCount(0);
   await expect(page.getByRole("button", { name: mobile(page) ? "Touch mute sound" : "Mute sound", exact: true })).toBeVisible();
   await expect(page.locator(".screen-header")).toContainText("ABOUT");

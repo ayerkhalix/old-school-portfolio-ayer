@@ -31,12 +31,12 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
         const camera = new T.OrthographicCamera(-5.5, 5.5, 4, -4, 0.1, 100); camera.position.set(0, 0, 16);
         const grain = new Uint8Array(128 * 128 * 4);
         for (let i = 0; i < grain.length; i += 4) {
-          const v = 190 + Math.random() * 45; grain[i] = v; grain[i + 1] = v; grain[i + 2] = v; grain[i + 3] = 255;
+          const v = 235 + Math.random() * 18; grain[i] = v; grain[i + 1] = v; grain[i + 2] = v; grain[i + 3] = 255;
         }
         const texture = new T.DataTexture(grain, 128, 128);
         texture.wrapS = texture.wrapT = T.RepeatWrapping; texture.repeat.set(5, 5); texture.needsUpdate = true;
-        const plastic = new T.MeshStandardMaterial({ color: 0x7d7770, roughness: 0.85, metalness: 0.1, map: texture, bumpMap: texture, bumpScale: 0.02 });
-        const dark = new T.MeshStandardMaterial({ color: 0x12191b, roughness: 0.56, metalness: 0.18 });
+        const plastic = new T.MeshPhysicalMaterial({ color: 0x7d7770, roughness: 0.39, metalness: 0.02, clearcoat: 0.28, clearcoatRoughness: 0.3, map: texture, roughnessMap: texture, bumpMap: texture, bumpScale: 0.003 });
+        const dark = new T.MeshStandardMaterial({ color: 0x12191b, roughness: 0.38, metalness: 0.08 });
         const trim = new T.MeshStandardMaterial({ color: 0x383b3a, roughness: 0.5, metalness: 0.3 });
         const rubber = new T.MeshStandardMaterial({ color: 0x171818, roughness: 0.9 });
         const mesh = (geometry: ConstructorParameters<typeof T.Mesh>[0], material: InstanceType<typeof T.Material>, x: number, y: number, z: number) => {
@@ -57,7 +57,7 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
         mesh(new RoundedBoxGeometry(1.2, 0.43, 0.12, 2, 0.05), trim, 3.16, -3.04, 0.47);
         mesh(new RoundedBoxGeometry(0.82, 0.19, 0.11, 2, 0.04), dark, 3.16, -3.04, 0.57);
         for (const x of [-3.88, 3.8]) mesh(new RoundedBoxGeometry(0.68, 0.39, 0.65, 2, 0.08), rubber, x, -3.58, -0.25);
-        const cyan = new T.PointLight(0x69d7f8, currentPower.current ? 8 : 1.8, 15); cyan.position.set(-4, 1.1, 4); scene.add(cyan); light.current = cyan;
+        const cyan = new T.PointLight(0x69d7f8, currentPower.current ? 8 : 0, 15); cyan.position.set(-4, 1.1, 4); scene.add(cyan); light.current = cyan;
         const amber = new T.DirectionalLight(0xffd7ab, 2.4); amber.position.set(1, 7, 7); scene.add(amber);
         const blue = new T.DirectionalLight(0x618ac9, 1.2); blue.position.set(-8, 1, 4); scene.add(blue);
         const purple = new T.DirectionalLight(0x8578ce, 0.7); purple.position.set(7, 0, 3); scene.add(purple);
@@ -86,7 +86,7 @@ export default function TelevisionModel({ powered }: { powered: boolean }) {
   }, []);
   useEffect(() => {
     currentPower.current = powered;
-    if (light.current) light.current.intensity = powered ? 8 : 1.8;
+    if (light.current) light.current.intensity = powered ? 8 : 0;
     render.current?.();
   }, [powered, ready]);
   return <div className={`television-model ${ready ? "model-ready" : ""}`} ref={host} aria-hidden="true" />;

@@ -3,26 +3,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type Sound = "click" | "channel" | "power-on" | "power-off";
 type AudioGraph = {
-  context: AudioContext; master: GainNode; hum: GainNode; noise: AudioBuffer;
-  sources: (AudioBufferSourceNode | OscillatorNode)[];
+  context: AudioContext; master: GainNode; noise: AudioBuffer;
 };
 
-export function useAudio(powered: boolean) {
-  const [muted, setMuted] = useState(true);
-  const [volume, setVolume] = useState(35);
+export function useAudio() {
+  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(55);
   const graph = useRef<AudioGraph | null>(null);
-  const preferences = useRef({ muted: true, volume: 35, powered });
+  const preferences = useRef({ muted: false, volume: 55 });
   const sync = useCallback(() => {
     const audio = graph.current;
     if (!audio || audio.context.state === "closed") return;
-    const { muted, volume, powered } = preferences.current;
-    const now = audio.context.currentTime;
-    audio.master.gain.cancelScheduledValues(now);
-    audio.master.gain.setTargetAtTime(muted || document.hidden ? 0 : volume / 100 * .7, now, .025);
-    audio.hum.gain.setTargetAtTime(powered ? .013 : 0, now, .08);
+    const { muted, volume } = preferences.current;
+    // No continuous source advances this graph while idle. Set the intrinsic
+    // gain directly so mute/volume also take effect without a rendering tick.
+    audio.master.gain.value = muted || document.hidden ? 0 : volume / 100 * .7;
   }, []);
 
-  // Called only by remote/keyboard gestures. A restored preference cannot autoplay.
+  // Only brief button/channel/power sounds. No room noise or continuous hum.
   const unlock = useCallback(() => {
     try {
       if (!graph.current) {
@@ -31,22 +29,7 @@ export function useAudio(powered: boolean) {
         const noise = context.createBuffer(1, context.sampleRate * 4, context.sampleRate);
         const samples = noise.getChannelData(0);
         for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
-        const air = context.createBufferSource(); air.buffer = noise; air.loop = true;
-        const lowpass = context.createBiquadFilter(); lowpass.type = "lowpass"; lowpass.frequency.value = 650;
-        const highpass = context.createBiquadFilter(); highpass.type = "highpass"; highpass.frequency.value = 90;
-        const airGain = context.createGain(); airGain.gain.value = .095;
-        air.connect(lowpass); lowpass.connect(highpass); highpass.connect(airGain); airGain.connect(master);
-        const breeze = context.createOscillator(); breeze.frequency.value = .09;
-        const drift = context.createGain(); drift.gain.value = 170;
-        breeze.connect(drift); drift.connect(lowpass.frequency);
-        const hum = context.createGain(); hum.gain.value = preferences.current.powered ? .013 : 0; hum.connect(master);
-        const fundamental = context.createOscillator(); fundamental.frequency.value = 60; fundamental.connect(hum);
-        const overtone = context.createOscillator(); overtone.frequency.value = 120;
-        const overtoneGain = context.createGain(); overtoneGain.gain.value = .22;
-        overtone.connect(overtoneGain); overtoneGain.connect(hum);
-        const sources = [air, breeze, fundamental, overtone];
-        graph.current = { context, master, hum, noise, sources };
-        sources.forEach(source => source.start());
+        graph.current = { context, master, noise };
       }
       void graph.current.context.resume().then(sync).catch(() => {});
       sync(); return graph.current;
@@ -85,23 +68,37 @@ export function useAudio(powered: boolean) {
   const toggleMute = useCallback(() => {
     const next = !preferences.current.muted;
     preferences.current.muted = next; setMuted(next);
-    try { localStorage.setItem("crt-muted", String(next)); } catch {}
+    try { localStorage.setItem("portfolio.muted", String(next)); } catch {}
     if (!next) { unlock(); sound(); } else sync();
   }, [sound, sync, unlock]);
+  const unmute = useCallback(() => {
+    preferences.current.muted = false; setMuted(false);
+    if (preferences.current.volume === 0) {
+      preferences.current.volume = 55; setVolume(55);
+    }
+    try {
+      localStorage.setItem("portfolio.muted", "false");
+      localStorage.setItem("portfolio.volume", String(preferences.current.volume));
+    } catch {}
+    unlock(); sync();
+  }, [sync, unlock]);
   const changeVolume = useCallback((amount: number) => {
     const next = Math.max(0, Math.min(100, preferences.current.volume + amount));
     preferences.current.volume = next; setVolume(next); sync();
-    try { localStorage.setItem("crt-volume", String(next)); } catch {}
+    try { localStorage.setItem("portfolio.volume", String(next)); } catch {}
   }, [sync]);
-  useEffect(() => { preferences.current.powered = powered; sync(); }, [powered, sync]);
   useEffect(() => {
     try {
-      const savedMuted = localStorage.getItem("crt-muted") !== "false";
-      const savedVolume = Number(localStorage.getItem("crt-volume") ?? 35);
-      preferences.current.muted = savedMuted; setMuted(savedMuted);
-      if (Number.isFinite(savedVolume)) {
-        preferences.current.volume = Math.max(0, Math.min(100, savedVolume)); setVolume(preferences.current.volume);
-      }
+      const savedVolume = Number(localStorage.getItem("portfolio.volume") ?? localStorage.getItem("crt-volume") ?? 55);
+      // A saved zero is silence even when the mute switch is off.
+      // Preserve audible preferences, but every new visit starts with sound.
+      localStorage.setItem("portfolio.muted", "false");
+      const initialVolume = Number.isFinite(savedVolume) && savedVolume > 0 ? Math.min(100, savedVolume) : 55;
+      preferences.current.volume = initialVolume;
+      // Storage is only available after hydration; keep the server default stable.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVolume(initialVolume);
+      localStorage.setItem("portfolio.volume", String(initialVolume));
     } catch {}
     const visibility = () => {
       const audio = graph.current; if (!audio) return;
@@ -112,8 +109,8 @@ export function useAudio(powered: boolean) {
     return () => {
       document.removeEventListener("visibilitychange", visibility);
       const audio = graph.current; graph.current = null;
-      if (audio) { audio.sources.forEach(source => { try { source.stop(); } catch {} }); void audio.context.close().catch(() => {}); }
+      if (audio) void audio.context.close().catch(() => {});
     };
   }, [sync]);
-  return { muted, volume, sound, toggleMute, changeVolume };
+  return { muted, volume, sound, toggleMute, changeVolume, unmute };
 }
